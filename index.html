@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Coastrack App</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet CSS & JS for GPS Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="mobile-wrapper">
+        
+        <!-- 1. Splash Screen -->
+        <div id="view-splash" class="view active">
+            <div class="splash-content">
+                <div class="splash-logo">
+                    <div class="logo-line" style="animation-delay: 0.1s">COA</div>
+                    <div class="logo-line" style="animation-delay: 0.3s">STR</div>
+                    <div class="logo-line" style="animation-delay: 0.5s">ACK</div>
+                </div>
+                <div class="nfc-scan">
+                    <div class="phone-icon-wrapper">
+                        <i class="fa-solid fa-mobile-screen"></i>
+                        <div class="ripple"></div>
+                    </div>
+                    <p>Waiting for NFC scanning...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Profile / Setup -->
+        <div id="view-profile" class="view">
+            <div class="profile-header">
+                <h1 class="top-logo">COASTRACK</h1>
+            </div>
+            <div class="form-container">
+                <div class="input-group">
+                    <input type="text" id="p-name" placeholder="Name" autocomplete="off">
+                    <label for="p-name">Name</label>
+                </div>
+                <div class="input-row">
+                    <div class="input-group half">
+                        <input type="number" id="p-age" placeholder="Age">
+                        <label for="p-age">Age</label>
+                    </div>
+                    <div class="input-group half">
+                        <input type="number" id="p-height" placeholder="Height">
+                        <label for="p-height">Height (cm)</label>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <input type="number" id="p-weight" placeholder="Weight">
+                    <label for="p-weight">Weight (kg)</label>
+                </div>
+                
+                <div class="medical-buttons">
+                    <button class="med-btn">CHRONIC ILLNESS <i class="fa-solid fa-chevron-right"></i></button>
+                    <button class="med-btn">KNOWN ALLERGIES <i class="fa-solid fa-chevron-right"></i></button>
+                    <button class="med-btn">CHRONIC MEDICATION <i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                
+                <button class="action-btn pink" onclick="app.saveProfile()">
+                    Save and Have Fun! <i class="fa-solid fa-play"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3. Rides View -->
+        <div id="view-rides" class="view with-nav">
+            <div class="app-header">
+                <h2 class="top-logo">COASTRACK</h2>
+                <div class="header-badges" style="display:flex; align-items:center; gap: 10px;">
+                    <div id="vitals-widget" style="background: rgba(255,59,48,0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: #FF3B30; display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,59,48,0.3);">
+                        <i class="fa-solid fa-heart" style="animation: pulse 1s infinite;"></i> <span id="bpm-val">--</span>
+                        <i class="fa-solid fa-droplet" style="color: #344CB7; margin-left:5px;"></i> <span id="spo2-val" style="color: #344CB7;">--%</span>
+                    </div>
+                    <img src="resources/kids_lying_on_grass.jpeg" class="avatar" alt="User">
+                </div>
+            </div>
+            <div class="scrollable-content padding-bottom">
+                <div class="ride-card" style="background-image: url('resources/rollercoster.jpeg')">
+                    <div class="ride-overlay"></div>
+                    <div class="ride-content">
+                        <h2 class="ride-title">HELL<br>RIDE</h2>
+                        <div class="ride-meta">
+                            <span class="badge red">Extreme</span>
+                            <span class="badge glass"><i class="fa-regular fa-clock"></i> 5m wait</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ride-card" style="background-image: url('resources/water_track.jpeg')">
+                    <div class="ride-overlay"></div>
+                    <div class="ride-content">
+                        <h2 class="ride-title">HIGH<br>& LOW</h2>
+                        <div class="ride-meta">
+                            <span class="badge blue">Water</span>
+                            <span class="badge glass"><i class="fa-regular fa-clock"></i> 15m wait</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ride-card" style="background-image: url('resources/view.jpeg')">
+                    <div class="ride-overlay"></div>
+                    <div class="ride-content">
+                        <h2 class="ride-title">SCENIC<br>VIEW</h2>
+                        <div class="ride-meta">
+                            <span class="badge green">Family</span>
+                            <span class="badge glass"><i class="fa-regular fa-clock"></i> No wait</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Food View -->
+        <div id="view-food" class="view with-nav">
+            <div class="app-header">
+                <h2 class="top-logo">COASTRACK</h2>
+            </div>
+            <div class="scrollable-content list-view padding-bottom">
+                <div class="list-item">
+                    <div class="item-img" style="background-image: url('resources/burgers.jpeg')"></div>
+                    <div class="item-info">
+                        <h3>BURGERS</h3>
+                        <p>Classic beef and cheese</p>
+                        <div class="stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                        </div>
+                    </div>
+                    <button class="add-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div class="list-item">
+                    <div class="item-img" style="background-image: url('resources/pizza.jpeg')"></div>
+                    <div class="item-info">
+                        <h3>PIZZA</h3>
+                        <p>Wood-fired perfection</p>
+                        <div class="stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>
+                        </div>
+                    </div>
+                    <button class="add-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div class="list-item">
+                    <div class="item-img" style="background-image: url('resources/hotdogs.jpeg')"></div>
+                    <div class="item-info">
+                        <h3>HOTDOGS</h3>
+                        <p>Loaded with toppings</p>
+                        <div class="stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>
+                        </div>
+                    </div>
+                    <button class="add-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div class="list-item">
+                    <div class="item-img" style="background-image: url('resources/ice_cream.jpeg')"></div>
+                    <div class="item-info">
+                        <h3>ICE CREAM</h3>
+                        <p>Cool down with flavor</p>
+                        <div class="stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                    </div>
+                    <button class="add-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Shop View -->
+        <div id="view-shop" class="view with-nav">
+            <div class="app-header">
+                <h2 class="top-logo">COASTRACK</h2>
+            </div>
+            <div class="scrollable-content list-view padding-bottom">
+                <div class="list-item">
+                    <div class="item-img" style="background-image: url('resources/bears_view.jpeg')"></div>
+                    <div class="item-info">
+                        <h3>BEARS</h3>
+                        <p>Souvenir teddy bears</p>
+                        <div class="stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>
+                        </div>
+                    </div>
+                    <button class="add-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div class="list-item">
+                    <div class="item-img" style="background-image: url('resources/cool_bear.jpeg')"></div>
+                    <div class="item-info">
+                        <h3>PLUSHIES</h3>
+                        <p>Soft and huggable</p>
+                        <div class="stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
+                        </div>
+                    </div>
+                    <button class="add-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+                <div class="list-item">
+                    <div class="item-img" style="background-image: url('resources/cards.jpeg')"></div>
+                    <div class="item-info">
+                        <h3>GIFT CARDS</h3>
+                        <p>Perfect for anyone</p>
+                        <div class="stars">
+                            <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+                        </div>
+                    </div>
+                    <button class="add-btn"><i class="fa-solid fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5.5 Map View -->
+        <div id="view-map" class="view with-nav">
+            <div class="app-header">
+                <h2 class="top-logo">LIVE MAP</h2>
+            </div>
+            <div id="map" style="flex: 1; width: 100%; border-radius: 20px 20px 0 0; z-index: 1;"></div>
+        </div>
+
+        <!-- 6. Emergency View -->
+        <div id="view-emergency" class="view with-nav emergency-bg">
+            <div class="app-header transparent">
+                <h2 class="top-logo black-text">COASTRACK</h2>
+            </div>
+            <div class="emergency-content">
+                <div class="warning-circle">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3>EMERGENCY</h3>
+                <p>You are about to inform an emergency and reach the designated staff.</p>
+                <button class="action-btn white shadow">CALL NOW</button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation -->
+        <nav id="bottom-nav" class="hidden">
+            <div class="nav-item active" id="nav-rides" onclick="app.navigate('view-rides', 'nav-rides')">
+                <i class="fa-solid fa-ticket"></i>
+                <span>Rides</span>
+            </div>
+            <div class="nav-item" id="nav-food" onclick="app.navigate('view-food', 'nav-food')">
+                <i class="fa-solid fa-burger"></i>
+                <span>Food</span>
+            </div>
+            <div class="nav-item" id="nav-shop" onclick="app.navigate('view-shop', 'nav-shop')">
+                <i class="fa-solid fa-gift"></i>
+                <span>Shop</span>
+            </div>
+            <div class="nav-item" id="nav-map" onclick="app.navigate('view-map', 'nav-map'); if(app.map) app.map.invalidateSize();">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>Map</span>
+            </div>
+            <div class="nav-item" id="nav-emergency" onclick="app.navigate('view-emergency', 'nav-emergency')">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>SOS</span>
+            </div>
+        </nav>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
