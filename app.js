@@ -1,13 +1,66 @@
 const app = {
     init() {
-        // Simulate NFC scanning / Splash screen delay
-        setTimeout(() => {
-            // First time users go to profile, let's simulate that
-            this.navigate('view-profile');
+        // Login ekranında bekle
+    },
+    
+    currentUsername: "",
+
+    async login() {
+        const u = document.getElementById("login-username").value;
+        const p = document.getElementById("login-password").value;
+        
+        try {
+            // Relative URL ensures it works on localhost vs 127.0.0.1 flawlessly
+            const res = await fetch("/login", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({username: u, password: p})
+            });
+            const data = await res.json();
             
-            // To test direct to rides:
-            // this.navigate('view-rides', 'nav-rides');
-        }, 3000); 
+            if(data.success) {
+                this.currentUsername = u.toLowerCase();
+                document.getElementById("p-name").value = data.name;
+                document.getElementById("p-age").value = data.age;
+                this.navigate("view-profile"); // Profil onay ekranına git
+            } else {
+                const err = document.getElementById("login-error");
+                err.innerText = data.message;
+                err.style.display = "block";
+            }
+        } catch(e) {
+            console.error("Login hatası:", e);
+        }
+    },
+    
+    async register() {
+        const u = document.getElementById("reg-username").value;
+        const p = document.getElementById("reg-password").value;
+        const n = document.getElementById("reg-name").value;
+        const a = parseInt(document.getElementById("reg-age").value) || 20;
+        const i = document.getElementById("reg-illness").value || "none";
+        
+        try {
+            const res = await fetch("/register", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({username: u, password: p, name: n, age: a, illness: i})
+            });
+            const data = await res.json();
+            if(data.success) {
+                // Return to login screen
+                document.getElementById("login-username").value = u;
+                document.getElementById("login-password").value = p;
+                this.navigate("view-splash");
+                alert("Kayıt başarılı! Şimdi giriş yapabilirsiniz.");
+            } else {
+                const err = document.getElementById("reg-error");
+                err.innerText = data.message;
+                err.style.display = "block";
+            }
+        } catch(e) {
+            console.error("Register hatası:", e);
+        }
     },
 
     navigate(viewId, navId = null) {
@@ -46,7 +99,6 @@ const app = {
             if (targetNav) {
                 targetNav.classList.add('active');
             }
-        }
         }
     },
 
@@ -109,7 +161,9 @@ function initWebSocket() {
     ws.onmessage = function(event) {
         try {
             const data = JSON.parse(event.data);
-            if(data.type === "sensor") {
+            
+            // Sadece giriş yapmış olan kullanıcının verilerini mobil arayüzde göster
+            if(data.type === "sensor" && data.username === app.currentUsername) {
                 // UI Güncelleme (Nabız ve Oksijen)
                 const bpmEl = document.getElementById("bpm-val");
                 const spo2El = document.getElementById("spo2-val");
@@ -130,7 +184,7 @@ function initWebSocket() {
                         // Uyarı metnini AI'nin gönderdiği sebeple değiştir
                         const reasonText = document.querySelector(".emergency-content p");
                         if(reasonText) {
-                            reasonText.innerHTML = `<strong>AI Uyarısı:</strong> ${data.reason}<br>Müdahale ekibi yönlendiriliyor...`;
+                            reasonText.innerHTML = `<strong>Durum Tespiti:</strong> ${data.reason}<br><br><span style="color: #444; font-size: 0.95rem;">💡 <b>Öneri:</b> Lütfen güvenli bir alana geçip dinlenin. İhtiyaç halinde park görevlilerine başvurun.</span>`;
                             reasonText.style.color = "red";
                         }
                         

@@ -1,51 +1,67 @@
-1. Güç Katmanı (Otonom Batarya Sistemi)
-   Sistemi bilgisayardan koparıp özgürleştirdiğimiz yer burası.
+# COASTRACK - Donanım Bağlantı Rehberi (Master Wiring Guide)
 
-LiPo Pilin Kırmızı Kablosu (+) ➔ TP4056'nın B+ pinine.
+Bu belge, **COASTRACK** akıllı bileklik projesinin tam fonksiyonel breadboard prototipine ait nihai ve doğrulanmış donanım bağlantı şemasını içermektedir. Projenin beyni **Arduino Nano (CH340 Klon)** mikrodenetleyicisidir.
 
-LiPo Pilin Siyah Kablosu (-) ➔ TP4056'nın B- pinine.
+---
 
-TP4056 OUT+ ➔ Arduino Nano'nun 5V pinine.
+## 🔌 1. Güç Dağıtımı (Power Rails)
 
-TP4056 OUT- ➔ Arduino Nano'nun GND pinine.
-(Not: Bu bağlantıyı yaptıktan sonra pili şarj etmek istersen, gücü Arduino'dan değil, TP4056'nın üzerindeki Type-C girişinden vereceksin).
+Modüllerin sağlıklı çalışabilmesi ve akım yetersizliği yaşamamak için Arduino Nano'nun güç pinleri breadboard üzerindeki güç kanallarına (raylarına) dağıtılmıştır.
 
-2. MAX30102 (Sağlık Sensörü)
-   Lehimli ve kaya gibi sağlam I2C bağlantımız.
+- **Arduino Nano 5V** ➔ Breadboard Üst Kırmızı (+) Hattına
+- **Arduino Nano GND** ➔ Breadboard Üst Mavi (-) Hattına
+- **Breadboard Üst Hat (+)** ➔ Jumper kablo ile **Breadboard Alt Hat (+)**'a köprülenmiştir.
+- **Breadboard Üst Hat (-)** ➔ Jumper kablo ile **Breadboard Alt Hat (-)**'a köprülenmiştir.
 
-VIN ➔ Arduino'nun 3V3 pinine (5V'a takma, 3.3V daha stabil çalışır).
+_Not: USB kablosu takılıyken sistem gücünü doğrudan bilgisayardan alır. Pil katmanı (TP4056 + LiPo) entegre edildiğinde bu ana güç hatları beslenecektir._
 
-GND ➔ Arduino'nun GND pinine.
+---
 
-SDA ➔ Arduino'nun A4 pinine.
+## 🫀 2. MAX30102 (Nabız ve Oksijen Sensörü)
 
-SCL ➔ Arduino'nun A5 pinine.
+Sensör, I2C protokolü üzerinden haberleşir. Arduino Nano üzerindeki donanımlı I2C pinleri **A4 (SDA)** ve **A5 (SCL)**'dir. Bazı klon sensörlerin kararlı çalışması için 5V besleme tercih edilmiştir.
 
-3. NEO-7M GPS (Konum Modülü)
-   Uyduları dinleyeceğimiz Sanal Seri Port (SoftwareSerial) bağlantısı.
+| Sensör Pini (Arka Etiket) | Kablo Rengi | Bağlanacağı Arduino Nano Pini | Açıklama                                   |
+| :------------------------ | :---------- | :---------------------------- | :----------------------------------------- |
+| **VIN**                   | Beyaz       | **5V** (veya Güç Rayı +)      | Güç Girişi (Regülatör tetiklemesi için 5V) |
+| **GND**                   | Siyah       | **GND** (veya Güç Rayı -)     | Topraklama / Şase                          |
+| **SDA**                   | Kahverengi  | **A4**                        | Serial Data (I2C Veri Hattı)               |
+| **SCL**                   | Kırmızı     | **A5**                        | Serial Clock (I2C Saat Hattı)              |
 
-VCC ➔ Arduino'nun 5V pinine.
+_Not: Sensör üzerindeki `INT`, `RD`, `IRD` gibi diğer yardımcı pinler tamamen boş bırakılmıştır._
 
-GND ➔ Arduino'nun GND pinine.
+---
 
-TX ➔ Arduino'nun D4 pinine.
+## 🛰️ 3. u-blox NEO-7M / NEO-6M (GPS Modülü)
 
-RX ➔ Arduino'nun D3 pinine.
+GPS modülü, Arduino'nun donanımsal seri portunu meşgul etmemek amacıyla `SoftwareSerial` kütüphanesi kullanılarak sanal seri port üzerinden konfigüre edilmiştir.
 
-4. HC-06 Bluetooth (Haberleşme Modülü)
-   Python backend'imize verileri uçuracak olan ana köprümüz. Bunu Arduino'nun Donanımsal Seri Portuna (0 ve 1) bağlayacağız ki Serial.print() komutlarımız direkt bilgisayara (Python'a) gitsin.
+| GPS Modül Pini | Kablo Rengi   | Bağlanacağı Arduino Nano Pini | Açıklama                             |
+| :------------- | :------------ | :---------------------------- | :----------------------------------- |
+| **VCC**        | (Güç Kablosu) | **5V** (veya Güç Rayı +)      | Güç Girişi                           |
+| **GND**        | (Güç Kablosu) | **GND** (veya Güç Rayı -)     | Topraklama / Şase                    |
+| **TX**         | Mor           | **D4**                        | GPS Veri Gönderme (Arduino Sanal RX) |
+| **RX**         | Mavi          | **D3**                        | GPS Veri Alma (Arduino Sanal TX)     |
 
-VCC ➔ Arduino'nun 5V pinine.
+_Önemli Uyarı: GPS Seramik Anteninin sokete tam oturduğundan ve aktif konum takibi için antenin açık alanda/cam kenarında gökyüzünü gördüğünden emin olunmalıdır._
 
-GND ➔ Arduino'nun GND pinine.
+---
 
-TX ➔ Arduino'nun RX0 (D0) pinine (Çapraz bağlantı mantığı).
+## 📡 4. HC-06 (Bluetooth Modülü)
 
-RX ➔ Arduino'nun TX1 (D1) pinine.
+Toplanan sensör verilerini Python backend'ine kablosuz fırlatmak amacıyla Arduino'nun donanımsal seri portuna (`HardwareSerial`) çapraz (Cross) bağlantı mantığıyla bağlanmıştır.
 
-🚨 ÇOK KRİTİK BİR KURAL 🚨
-HC-06'yı Arduino'nun 0 (RX) ve 1 (TX) pinlerine bağladığımız için, bilgisayardan Arduino'ya kod yüklemeye çalıştığında hata alırsın (Çünkü Arduino aynı anda hem bilgisayardan kod alıp hem Bluetooth ile konuşamaz).
+| HC-06 Modül Pini | Kablo Rengi   | Bağlanacağı Arduino Nano Pini | Açıklama                             |
+| :--------------- | :------------ | :---------------------------- | :----------------------------------- |
+| **VCC**          | (Güç Kablosu) | **5V** (veya Güç Rayı +)      | Güç Girişi (3.3V - 6V Toleranslı)    |
+| **GND**          | (Güç Kablosu) | **GND** (veya Güç Rayı -)     | Topraklama / Şase                    |
+| **TX**           | Sarı          | **RX0 (D0)**                  | Bluetooth Veri Gönderme ➔ Arduino RX |
+| **RX**           | Yeşil         | **TX1 (D1)**                  | Bluetooth Veri Alma ➔ Arduino TX     |
 
-Bu yüzden: Arduino'ya kod yüklerken HC-06'nın TX ve RX kablolarını yerinden çıkaracaksın. Yükleme "Done uploading" dedikten sonra kabloları geri takabilirsin.
+---
 
-Kablolamayı bu şemaya göre breadboard üzerinde tamamla. Her şey yerli yerine oturduğunda bana haber ver, bütün bu sensörleri aynı anda okuyup o harika Python backend'ine JSON fırlatacak C++ kodunu yazalım!
+## 🚨 ALTIN KURALLAR VE ÖNEMLİ NOTLAR
+
+1.  **Kod Yükleme (Upload) Kuralı:** HC-06 Bluetooth modülü Arduino'nun **RX0 (D0)** ve **TX1 (D1)** pinlerine bağlı olduğu sürece bilgisayardan Arduino'ya yeni kod yüklenemez (`avrdude: stk500_getsync()` hatası alınır).
+    - **Çözüm:** Arduino IDE üzerinden "Yükle" butonuna basmadan hemen önce **Sarı (RX0)** ve **Yeşil (TX1)** kabloları Arduino'dan sökün. Yükleme bittiğinde ("Done uploading") kabloları tekrar eski yerlerine takın.
+2.  **I2C Çakışma Kontrolü:** MAX30102 sensörünün bağlantı kablolarının milimetrik temassızlıkları tüm I2C hattını kilitleyebilir ve Python backend'ine hata paketi fırlatılmasına sebep olur. Lehimlerin sağlamlığı ve kabloların breadboard'a tam oturduğu periyodik olarak kontrol edilmelidir.

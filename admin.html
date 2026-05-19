@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coastrack - Global Admin Control Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --panel-bg: #1E1E1E;
+            --text-light: #F8F9FA;
+            --brand-blue: #344CB7;
+            --brand-red: #FF3B30;
+            --brand-yellow: #FDE02A;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            margin: 0; padding: 15px; font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark); color: var(--text-light);
+            display: grid; grid-template-columns: 350px 1fr 300px;
+            gap: 15px; height: 100vh; box-sizing: border-box;
+        }
+        h1, h2, h3 { font-family: 'Anton', sans-serif; letter-spacing: 1px; margin-top: 0; }
+        .panel {
+            background-color: var(--panel-bg); border-radius: 15px; padding: 15px;
+            border: 1px solid var(--glass-border); display: flex; flex-direction: column; overflow: hidden;
+        }
+        
+        /* Users Grid */
+        #users-list {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+        }
+        .user-card {
+            background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px;
+            border-left: 4px solid var(--brand-blue); display: flex; flex-direction: column; gap: 5px;
+            transition: all 0.3s ease;
+        }
+        .user-card.danger { border-left-color: var(--brand-red); animation: pulseBg 1s infinite; }
+        .user-header { display: flex; justify-content: space-between; font-weight: bold; }
+        .user-vitals { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; }
+        .vital { text-align: center; font-size: 0.8rem; }
+        .vital-val { font-size: 1.2rem; font-weight: bold; color: var(--brand-yellow); }
+        .vital-val.danger-text { color: var(--brand-red); }
+
+        #map { flex: 1; border-radius: 10px; min-height: 400px; }
+        
+        /* Logs */
+        .log-container {
+            flex: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .log-entry { padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); font-size: 0.85rem; border-left: 3px solid var(--brand-blue); }
+        .log-entry.alert { background: rgba(255, 59, 48, 0.2); border-left-color: var(--brand-red); }
+        
+        @keyframes pulseBg {
+            0% { background: rgba(255,59,48,0.1); }
+            50% { background: rgba(255,59,48,0.3); }
+            100% { background: rgba(255,59,48,0.1); }
+        }
+        .header-title { color: var(--brand-yellow); margin-bottom: 15px;}
+    </style>
+</head>
+<body>
+
+    <!-- LEFT: Connected Users -->
+    <div class="panel">
+        <h2 class="header-title"><i class="fa-solid fa-users"></i> LIVE VISITORS</h2>
+        <div id="users-list">
+            <!-- Cards will be populated here dynamically -->
+        </div>
+    </div>
+
+    <!-- CENTER: Map -->
+    <div class="panel">
+        <h2 class="header-title"><i class="fa-solid fa-map-location-dot"></i> GLOBAL PARK MAP</h2>
+        <div id="map"></div>
+    </div>
+
+    <!-- RIGHT: AI Alerts -->
+    <div class="panel">
+        <h2 class="header-title" style="color: var(--brand-red);"><i class="fa-solid fa-robot"></i> AI LOGS</h2>
+        <div class="log-container" id="log-container">
+            <div class="log-entry"><strong>System Active</strong><br><span style="color:#aaa;">Listening to local AI Gemma...</span></div>
+        </div>
+    </div>
+
+    <script>
+        const map = L.map('map').setView([36.8842, 30.7021], 16);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+
+        const markers = {}; // Store map markers for users
+
+        function addLog(message, isAlert=false) {
+            const container = document.getElementById('log-container');
+            const time = new Date().toLocaleTimeString();
+            const logDiv = document.createElement('div');
+            logDiv.className = `log-entry ${isAlert ? 'alert' : ''}`;
+            logDiv.innerHTML = `<strong>${time}</strong><br>${message}`;
+            container.prepend(logDiv);
+        }
+
+        function getReport(username) {
+            const btn = document.getElementById(`btn-ai-${username}`);
+            if(btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...`;
+            fetch(`/get_report?username=${username}`)
+            .then(r => r.json())
+            .then(data => {
+                if(btn) btn.innerHTML = `<i class="fa-solid fa-robot"></i> Get AI Report`;
+                if(data.success) {
+                    addLog(`🤖 <b>AI Medical Report for ${username}:</b><br>${data.report}`);
+                } else {
+                    addLog(`❌ <b>Failed to get report for ${username}</b><br>${data.message}`, true);
+                }
+            }).catch(e => {
+                if(btn) btn.innerHTML = `<i class="fa-solid fa-robot"></i> Get AI Report`;
+                addLog(`❌ <b>Error:</b> ${e}`, true);
+            });
+        }
+
+        function updateUserCard(data) {
+            const list = document.getElementById("users-list");
+            let card = document.getElementById(`user-${data.username}`);
+            
+            const isDanger = data.hr >= 150;
+            
+            if(!card) {
+                card = document.createElement("div");
+                card.id = `user-${data.username}`;
+                list.appendChild(card);
+                
+                // Add marker to map
+                const iconHtml = `<div style="background-color: ${data.username==='kaan'?'#FDE02A':'#007AFF'}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff;"></div>`;
+                const icon = L.divIcon({ className: 'custom-pin', html: iconHtml, iconSize: [16,16] });
+                markers[data.username] = L.marker([data.lat, data.lng], {icon: icon}).bindTooltip(data.name).addTo(map);
+            }
+
+            card.className = `user-card ${isDanger ? 'danger' : ''}`;
+            card.innerHTML = `
+                <div class="user-header">
+                    <span>${data.name} ${data.username==='kaan' ? '(You)' : ''}</span>
+                    <i class="fa-solid ${isDanger ? 'fa-triangle-exclamation' : 'fa-check-circle'}" style="color:${isDanger?'#FF3B30':'#34C759'}"></i>
+                </div>
+                <div class="user-vitals">
+                    <div class="vital"><div class="vital-val ${isDanger?'danger-text':''}">${data.hr}</div><div>HR</div></div>
+                    <div class="vital"><div class="vital-val">${data.spo2}%</div><div>SpO2</div></div>
+                </div>
+                <button id="btn-ai-${data.username}" onclick="getReport('${data.username}')" style="margin-top: 5px; background: var(--brand-blue); color: white; border: none; padding: 5px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight: bold;"><i class="fa-solid fa-robot"></i> Get AI Report</button>
+            `;
+
+            if(markers[data.username]) {
+                markers[data.username].setLatLng([data.lat, data.lng]);
+            }
+        }
+
+        function connectAdminWS() {
+            const host = window.location.host || "localhost:8000";
+            const ws = new WebSocket("ws://" + host + "/ws");
+            
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if(data.type === "sensor") {
+                    updateUserCard(data);
+                    
+                    if(data.alert === "CRITICAL_ALERT") {
+                        addLog(`🔥 <b>SOS: ${data.name}</b><br>${data.reason}`, true);
+                    }
+                }
+            };
+            ws.onclose = () => setTimeout(connectAdminWS, 2000);
+        }
+        connectAdminWS();
+    </script>
+</body>
+</html>
