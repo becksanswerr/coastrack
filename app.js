@@ -4,13 +4,13 @@ const app = {
     },
     
     currentUsername: "",
+    userPoints: 0,
 
     async login() {
         const u = document.getElementById("login-username").value;
         const p = document.getElementById("login-password").value;
         
         try {
-            // Relative URL ensures it works on localhost vs 127.0.0.1 flawlessly
             const res = await fetch("/login", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
@@ -22,6 +22,9 @@ const app = {
                 this.currentUsername = u.toLowerCase();
                 document.getElementById("p-name").value = data.name;
                 document.getElementById("p-age").value = data.age;
+                document.getElementById("p-illness").value = data.illness || "none";
+                document.getElementById("p-allergies").value = data.allergies || "none";
+                this.refreshUserInfo();
                 this.navigate("view-profile"); // Profil onay ekranına git
             } else {
                 const err = document.getElementById("login-error");
@@ -39,16 +42,17 @@ const app = {
         const n = document.getElementById("reg-name").value;
         const a = parseInt(document.getElementById("reg-age").value) || 20;
         const i = document.getElementById("reg-illness").value || "none";
+        const allergies = document.getElementById("reg-allergies").value || "none";
+        const emergencyContact = document.getElementById("reg-emergency").value || "none";
         
         try {
             const res = await fetch("/register", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({username: u, password: p, name: n, age: a, illness: i})
+                body: JSON.stringify({username: u, password: p, name: n, age: a, illness: i, allergies: allergies, emergency_contact: emergencyContact})
             });
             const data = await res.json();
             if(data.success) {
-                // Return to login screen
                 document.getElementById("login-username").value = u;
                 document.getElementById("login-password").value = p;
                 this.navigate("view-splash");
@@ -64,24 +68,18 @@ const app = {
     },
 
     navigate(viewId, navId = null) {
-        // Get all views
         const views = document.querySelectorAll('.view');
-        
-        // Remove active class from all views
         views.forEach(view => {
             if (view.classList.contains('active')) {
-                // Optional: add fade-out effect for previous view if needed
                 view.classList.remove('active');
             }
         });
 
-        // Add active class to target view
         const targetView = document.getElementById(viewId);
         if (targetView) {
             targetView.classList.add('active');
         }
 
-        // Handle bottom navigation visibility
         const bottomNav = document.getElementById('bottom-nav');
         if (targetView && targetView.classList.contains('with-nav')) {
             bottomNav.classList.remove('hidden');
@@ -89,7 +87,6 @@ const app = {
             bottomNav.classList.add('hidden');
         }
 
-        // Update active state on navigation icons
         if (navId) {
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
@@ -104,35 +101,69 @@ const app = {
 
     saveProfile() {
         const age = parseInt(document.getElementById("p-age").value) || 20;
-        // Check if any medical button was clicked (simplification for demo)
-        const isChronic = document.querySelector(".med-btn.active") ? "heart condition" : "none";
+        const illness = document.getElementById("p-illness").value || "none";
+        const allergies = document.getElementById("p-allergies").value || "none";
         
-        // Send to backend AI engine
-        if(ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-                type: "profile",
+        fetch('/update_profile', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                username: this.currentUsername,
                 age: age,
-                illness: isChronic
-            }));
-            console.log("Kullanıcı profili AI motoruna gönderildi:", {age, illness: isChronic});
-        }
+                illness: illness,
+                allergies: allergies
+            })
+        });
         
         this.navigate("view-rides", "nav-rides");
     },
     
+    async refreshUserInfo() {
+        try {
+            const res = await fetch(`/get_user_info?username=${this.currentUsername}`);
+            const data = await res.json();
+            if(data.success) {
+                this.userPoints = data.points;
+                const pointsEl = document.getElementById("wallet-points");
+                if(pointsEl) pointsEl.innerText = this.userPoints + " CP";
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    },
+    
+    async scanRide(rideName, buttonElement) {
+        const originalText = buttonElement.innerHTML;
+        buttonElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Loading...`;
+        try {
+            const res = await fetch("/scan_ride", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({username: this.currentUsername, ride_name: rideName})
+            });
+            const data = await res.json();
+            if(data.success) {
+                this.userPoints = data.total_points;
+                alert(`Tebrikler! ${rideName} oyuncağına bindiniz ve ${data.points_earned} CP kazandınız! Toplam: ${this.userPoints} CP`);
+                this.refreshUserInfo();
+                buttonElement.innerHTML = `<i class="fa-solid fa-check"></i> Enjoy!`;
+                buttonElement.style.background = "#34C759";
+            }
+        } catch(e) {
+            console.error(e);
+            buttonElement.innerHTML = originalText;
+
+
     map: null,
     marker: null,
     
     updateMap(lat, lng) {
         if (!this.map) {
-            // Haritayı başlat
             this.map = L.map('map').setView([lat, lng], 16);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; OpenStreetMap &copy; CARTO',
                 maxZoom: 19
             }).addTo(this.map);
             
-            // Özel Coastrack Pin'i
             const icon = L.divIcon({
                 className: 'custom-pin',
                 html: '<div style="background-color: #344CB7; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></div>',
@@ -140,7 +171,6 @@ const app = {
             });
             this.marker = L.marker([lat, lng], {icon: icon}).addTo(this.map);
         } else {
-            // Pin konumunu güncelle
             this.marker.setLatLng([lat, lng]);
             this.map.setView([lat, lng]);
         }
@@ -164,37 +194,13 @@ function initWebSocket() {
             
             // Sadece giriş yapmış olan kullanıcının verilerini mobil arayüzde göster
             if(data.type === "sensor" && data.username === app.currentUsername) {
-                // UI Güncelleme (Nabız ve Oksijen)
-                const bpmEl = document.getElementById("bpm-val");
-                const spo2El = document.getElementById("spo2-val");
-                if(bpmEl) bpmEl.innerText = data.hr;
-                if(spo2El) spo2El.innerText = data.spo2 + "%";
                 // Haritada Konumu Güncelle
                 if(data.lat && data.lng) {
                     app.updateMap(data.lat, data.lng);
                 }
-
-                // AI Risk Analiz Sonucu: Backend'den CRITICAL_ALERT gelirse!
-                if(data.alert === "CRITICAL_ALERT") {
-                    const emergencyView = document.getElementById("view-emergency");
-                    if(emergencyView && !emergencyView.classList.contains("active")) {
-                        console.log("⚠️ YAPAY ZEKA UYARISI:", data.reason);
-                        app.navigate("view-emergency", "nav-emergency");
-                        
-                        // Uyarı metnini AI'nin gönderdiği sebeple değiştir
-                        const reasonText = document.querySelector(".emergency-content p");
-                        if(reasonText) {
-                            reasonText.innerHTML = `<strong>Durum Tespiti:</strong> ${data.reason}<br><br><span style="color: #444; font-size: 0.95rem;">💡 <b>Öneri:</b> Lütfen güvenli bir alana geçip dinlenin. İhtiyaç halinde park görevlilerine başvurun.</span>`;
-                            reasonText.style.color = "red";
-                        }
-                        
-                        // Uyarı ikonunun daha hızlı çarpmasını sağla
-                        const warningCircle = document.querySelector(".warning-circle");
-                        if(warningCircle) {
-                            warningCircle.style.animationDuration = "0.5s";
-                        }
-                    }
-                }
+                
+                // Vitals and SOS updates are intentionally hidden from user UI per request.
+                // Logs view can manually refresh to pull data.
             }
         } catch(e) {
             console.error("WebSocket veri hatası:", e);

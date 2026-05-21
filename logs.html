@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coastrack - User Vitals Logs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --brand-blue: #344CB7;
+            --brand-cyan: #06B6D4;
+            --brand-yellow: #EAB308;
+            --brand-red: #EF4444;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            margin-top: 20px;
+        }
+
+        h1 {
+            font-family: 'Anton', sans-serif;
+            letter-spacing: 2px;
+            color: var(--brand-blue);
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2rem;
+            text-transform: uppercase;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--text-muted);
+            background: rgba(0,0,0,0.2);
+            color: white;
+            font-size: 1rem;
+        }
+
+        button {
+            background: var(--brand-blue);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #283a8f;
+        }
+
+        .log-card {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-time {
+            font-size: 0.9rem;
+            color: var(--brand-cyan);
+            font-family: monospace;
+        }
+
+        .log-vitals {
+            display: flex;
+            gap: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .hr { color: var(--brand-red); }
+        .spo2 { color: var(--brand-blue); }
+        
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vitals Log Viewer</h1>
+        <div class="search-box">
+            <input type="text" id="username-input" placeholder="Enter username (e.g. kaan)">
+            <button onclick="fetchLogs()"><i class="fa-solid fa-search"></i> Search</button>
+        </div>
+        <div id="logs-container">
+            <div class="empty-state">Enter a username to view their recent vitals logs.</div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchLogs() {
+            const username = document.getElementById("username-input").value.trim();
+            const container = document.getElementById("logs-container");
+            
+            if (!username) {
+                container.innerHTML = '<div class="empty-state" style="color:var(--brand-yellow);">Please enter a username.</div>';
+                return;
+            }
+
+            container.innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading...</div>';
+
+            try {
+                const res = await fetch(`/user_logs?username=${username}`);
+                const data = await res.json();
+                
+                if (data.success && data.logs && data.logs.length > 0) {
+                    container.innerHTML = "";
+                    const reversedLogs = [...data.logs].reverse();
+                    
+                    reversedLogs.forEach(log => {
+                        const time = new Date(log.time * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                        const card = document.createElement("div");
+                        card.className = "log-card";
+                        card.innerHTML = `
+                            <div class="log-time">${time}</div>
+                            <div class="log-vitals">
+                                <span class="hr"><i class="fa-solid fa-heart"></i> ${log.hr}</span>
+                                <span class="spo2"><i class="fa-solid fa-droplet"></i> ${log.spo2}%</span>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+                } else {
+                    container.innerHTML = `<div class="empty-state">No logs found for user '${username}'.</div>`;
+                }
+            } catch (e) {
+                container.innerHTML = `<div class="empty-state" style="color:var(--brand-red);">Error fetching logs.</div>`;
+                console.error(e);
+            }
+        }
+        
+        // Allow pressing Enter to search
+        document.getElementById("username-input").addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                fetchLogs();
+            }
+        });
+    </script>
+</body>
+</html>

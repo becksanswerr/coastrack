@@ -1,157 +1,954 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coastrack - Global Admin Control Center</title>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Modern Fonts: Outfit for headers, Inter for text -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
-            --bg-dark: #121212;
-            --panel-bg: #1E1E1E;
-            --text-light: #F8F9FA;
-            --brand-blue: #344CB7;
-            --brand-red: #FF3B30;
-            --brand-yellow: #FDE02A;
-            --glass-border: rgba(255, 255, 255, 0.1);
+            /* Premium Dark Theme Palette */
+            --bg-dark: #0B1120;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --text-light: #F8FAFC;
+            --text-muted: #94A3B8;
+            --brand-blue: #3B82F6;
+            --brand-cyan: #06B6D4;
+            --brand-red: #EF4444;
+            --brand-yellow: #EAB308;
+            --brand-green: #10B981;
+            --glass-border: rgba(255, 255, 255, 0.08);
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            margin: 0; padding: 15px; font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark); color: var(--text-light);
-            display: grid; grid-template-columns: 350px 1fr 300px;
-            gap: 15px; height: 100vh; box-sizing: border-box;
+            margin: 0;
+            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            background-image: radial-gradient(circle at 50% -20%, rgba(59, 130, 246, 0.15) 0%, rgba(11, 17, 32, 1) 60%);
+            display: grid;
+            grid-template-columns: 380px 1fr 380px;
+            gap: 20px;
+            height: 100vh;
+            overflow: hidden;
         }
-        h1, h2, h3 { font-family: 'Anton', sans-serif; letter-spacing: 1px; margin-top: 0; }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: 0.5px;
+            margin-top: 0;
+        }
+
         .panel {
-            background-color: var(--panel-bg); border-radius: 15px; padding: 15px;
-            border: 1px solid var(--glass-border); display: flex; flex-direction: column; overflow: hidden;
+            background: var(--panel-bg);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-        
+
+        .header-title {
+            color: var(--text-light);
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-title i {
+            color: var(--brand-cyan);
+            font-size: 1.2rem;
+        }
+
+        .header-title.red-title i {
+            color: var(--brand-red);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
         /* Users Grid */
         #users-list {
-            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-right: 5px;
         }
-        .user-card {
-            background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px;
-            border-left: 4px solid var(--brand-blue); display: flex; flex-direction: column; gap: 5px;
-            transition: all 0.3s ease;
-        }
-        .user-card.danger { border-left-color: var(--brand-red); animation: pulseBg 1s infinite; }
-        .user-header { display: flex; justify-content: space-between; font-weight: bold; }
-        .user-vitals { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; }
-        .vital { text-align: center; font-size: 0.8rem; }
-        .vital-val { font-size: 1.2rem; font-weight: bold; color: var(--brand-yellow); }
-        .vital-val.danger-text { color: var(--brand-red); }
 
-        #map { flex: 1; border-radius: 10px; min-height: 400px; }
+        .user-card {
+            background: rgba(15, 23, 42, 0.6);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+        }
+
+        .user-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .user-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: var(--brand-cyan);
+            transition: background 0.3s ease;
+        }
+
+        .user-card.danger {
+            border-color: rgba(239, 68, 68, 0.3);
+            animation: pulseCard 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .user-card.danger::before {
+            background: var(--brand-red);
+        }
+
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .status-icon {
+            font-size: 1.2rem;
+        }
+
+        .user-vitals {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .vital {
+            flex: 1;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .vital-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .vital-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-light);
+            transition: color 0.3s ease;
+        }
+
+        .vital-val.hr-yellow {
+            color: var(--brand-yellow);
+            text-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
+        }
+
+        .vital-val.hr-orange {
+            color: #F97316;
+            text-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+        }
+
+        .vital-val.hr-red {
+            color: var(--brand-red);
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .vital-val.danger-text {
+            color: var(--brand-red);
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        /* Watchlist: Purple */
+        .user-card.watchlist {
+            border-color: rgba(167, 93, 243, 0.4);
+        }
+        .user-card.watchlist::before { background: #A45DEF; }
         
+        .watchlist-badge {
+            display: inline-block; background: rgba(164,93,239,0.15);
+            border: 1px solid rgba(164,93,239,0.4); color: #A45DEF;
+            font-size: 0.7rem; padding: 2px 7px; border-radius: 10px; margin-left: 5px;
+        }
+        
+        /* Add User form */
+        .add-user-form {
+            background: rgba(0,0,0,0.3); border-radius: 12px; padding: 12px;
+            border: 1px solid rgba(255,255,255,0.07); margin-bottom: 12px;
+            display: none; flex-direction: column; gap: 8px;
+        }
+        .add-user-form.open { display: flex; }
+        .add-user-form input, .add-user-form textarea {
+            padding: 7px 10px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.4); color: white; font-size: 0.82rem;
+            font-family: 'Inter', sans-serif; width: 100%; box-sizing: border-box;
+        }
+        .add-user-form label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; }
+        .add-user-toggle { 
+            width: 100%; margin-bottom: 10px; background: rgba(16,185,129,0.1);
+            color: var(--brand-green); border: 1px solid rgba(16,185,129,0.3);
+            padding: 7px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;
+            font-weight: 600; transition: all 0.2s;
+        }
+        .add-user-toggle:hover { background: var(--brand-green); color: white; }
+        
+        /* Arduino popup */
+        .arduino-popup {
+            display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1500;
+            background: rgba(11,17,32,0.97); border: 1px solid var(--brand-cyan);
+            border-radius: 16px; padding: 20px; width: 380px; max-height: 300px;
+            overflow-y: auto; box-shadow: 0 0 30px rgba(6,182,212,0.3);
+        }
+        .arduino-popup.open { display: block; }
+        .arduino-popup h3 { color: var(--brand-cyan); margin: 0 0 10px; font-size: 1rem; }
+        .arduino-log { font-family: monospace; font-size: 0.8rem; color: #a0e8d0; line-height: 1.6; }
+
+        .btn-ai {
+            width: 100%;
+            margin-top: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--brand-blue);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-ai:hover {
+            background: var(--brand-blue);
+            color: white;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-action {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-light);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 10px;
+            background: var(--brand-green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Map */
+        #map {
+            flex: 1;
+            border-radius: 15px;
+            border: 1px solid var(--glass-border);
+            z-index: 1;
+        }
+
         /* Logs */
         .log-container {
-            flex: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px;
-            display: flex; flex-direction: column; gap: 10px;
+            flex: 1;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border: 1px inset rgba(255, 255, 255, 0.02);
         }
-        .log-entry { padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); font-size: 0.85rem; border-left: 3px solid var(--brand-blue); }
-        .log-entry.alert { background: rgba(255, 59, 48, 0.2); border-left-color: var(--brand-red); }
-        
-        @keyframes pulseBg {
-            0% { background: rgba(255,59,48,0.1); }
-            50% { background: rgba(255,59,48,0.3); }
-            100% { background: rgba(255,59,48,0.1); }
+
+        .log-entry {
+            flex-shrink: 0;
+            padding: 12px 15px;
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.8);
+            font-size: 0.9rem;
+            position: relative;
+            overflow: hidden;
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            line-height: 1.5;
         }
-        .header-title { color: var(--brand-yellow); margin-bottom: 15px;}
+
+        .log-entry::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: var(--brand-cyan);
+        }
+
+        .log-time {
+            font-size: 0.75rem;
+            color: var(--brand-cyan);
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .log-entry.alert {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .log-entry.alert::before {
+            background: var(--brand-red);
+        }
+
+        .log-entry.alert .log-time {
+            color: var(--brand-red);
+        }
+
+        /* Animations */
+        @keyframes pulseCard {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Custom Leaflet Pin */
+        .custom-pin-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .custom-pin-core {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+        }
+
+        .custom-pin-ring {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: inherit;
+            opacity: 0.3;
+            animation: mapPulse 2s infinite;
+        }
+
+        @keyframes mapPulse {
+            0% {
+                transform: scale(0.5);
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* AI Modal - compact & scrollable */
+        .ai-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .ai-modal {
+            background: var(--panel-bg); border: 1px solid var(--brand-cyan);
+            border-radius: 20px; padding: 24px; width: 90%; max-width: 460px;
+            max-height: 85vh; overflow-y: auto;
+            box-shadow: 0 0 30px rgba(6, 182, 212, 0.3); color: var(--text-light);
+            animation: slideIn 0.3s ease; position: relative;
+        }
+        .ai-modal h2 { color: var(--brand-cyan); margin-bottom: 12px; font-size: 1.2rem; }
+        .ai-modal p { line-height: 1.6; font-size: 1rem; }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: var(--brand-red);
+        }
+
+        .lang-btn {
+            position: fixed;
+            top: 15px;
+            right: 20px;
+            z-index: 999;
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: var(--brand-blue);
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .lang-btn:hover {
+            background: var(--brand-blue);
+            color: white;
+        }
     </style>
 </head>
+
 <body>
+
+    <button class="lang-btn" onclick="toggleLang()" id="lang-toggle-btn">🌐 TR</button>
 
     <!-- LEFT: Connected Users -->
     <div class="panel">
-        <h2 class="header-title"><i class="fa-solid fa-users"></i> LIVE VISITORS</h2>
+        <h2 class="header-title" data-i18n="vital_monitoring"><i class="fa-solid fa-satellite-dish"></i> VITAL MONITORING</h2>
+        
+        <!-- Add User Form -->
+        <button class="add-user-toggle" onclick="toggleAddUserForm()">
+            <i class="fa-solid fa-user-plus"></i> <span data-i18n="add_user">Add New User</span>
+        </button>
+        <div class="add-user-form" id="add-user-form">
+            <label>Full Name *</label>
+            <input type="text" id="au-name" placeholder="e.g. Ahmet Yılmaz">
+            <label>Username *</label>
+            <input type="text" id="au-username" placeholder="e.g. ahmet_y">
+            <div style="display:flex; gap:6px;">
+                <div style="flex:1"><label>Age *</label><input type="number" id="au-age" placeholder="25" style="width:100%"></div>
+                <div style="flex:1"><label>Emergency</label><input type="text" id="au-emergency" placeholder="Phone" style="width:100%"></div>
+            </div>
+            <label>Illness</label>
+            <input type="text" id="au-illness" placeholder="e.g. asthma, heart condition, none">
+            <label>Allergies</label>
+            <input type="text" id="au-allergies" placeholder="e.g. peanuts, penicillin, none">
+            <label>Notes</label>
+            <textarea id="au-notes" rows="2" placeholder="e.g. very active, drinks energy drinks"></textarea>
+            <button onclick="submitAddUser()" style="background:var(--brand-green);color:white;border:none;padding:8px;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:4px;">
+                <i class="fa-solid fa-check"></i> Create &amp; AI-Evaluate
+            </button>
+            <p id="add-user-msg" style="font-size:0.8rem; color:var(--brand-cyan); margin:4px 0 0;"></p>
+        </div>
+        
         <div id="users-list">
-            <!-- Cards will be populated here dynamically -->
+            <!-- Cards populated dynamically -->
         </div>
     </div>
 
     <!-- CENTER: Map -->
     <div class="panel">
-        <h2 class="header-title"><i class="fa-solid fa-map-location-dot"></i> GLOBAL PARK MAP</h2>
+        <h2 class="header-title" data-i18n="global_tracker"><i class="fa-solid fa-map-location-dot"></i> GLOBAL PARK
+            TRACKER</h2>
         <div id="map"></div>
     </div>
 
     <!-- RIGHT: AI Alerts -->
     <div class="panel">
-        <h2 class="header-title" style="color: var(--brand-red);"><i class="fa-solid fa-robot"></i> AI LOGS</h2>
+        <h2 class="header-title red-title" data-i18n="ai_diagnostics"><i class="fa-solid fa-microchip"></i> AI
+            DIAGNOSTICS</h2>
         <div class="log-container" id="log-container">
-            <div class="log-entry"><strong>System Active</strong><br><span style="color:#aaa;">Listening to local AI Gemma...</span></div>
+            <div class="log-entry">
+                <span class="log-time">SYSTEM ACTIVE</span>
+                <strong style="color: var(--text-light)" data-i18n="neural_online">Neural Engine Online</strong><br>
+                <span style="color: var(--text-muted);" data-i18n="awaiting">Awaiting telemetry data...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="ai-modal-overlay" class="ai-modal-overlay" onclick="closeModal(event)">
+        <div class="ai-modal">
+            <button class="close-modal" onclick="document.getElementById('ai-modal-overlay').style.display='none'"><i class="fa-solid fa-xmark"></i></button>
+            <h2><i class="fa-solid fa-microchip"></i> AI Report: <span id="ai-modal-title"></span></h2>
+            <p id="ai-modal-content"></p>
+        </div>
+    </div>
+    
+    <!-- Arduino Raw Data Monitor Popup -->
+    <div class="arduino-popup" id="arduino-popup">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3><i class="fa-solid fa-microchip" style="color:var(--brand-cyan)"></i> Arduino Raw Feed</h3>
+            <button onclick="document.getElementById('arduino-popup').classList.remove('open')" style="background:transparent;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="arduino-log" class="arduino-log">Waiting for sensor data...</div>
+    </div>
+    <button onclick="document.getElementById('arduino-popup').classList.toggle('open')" title="Arduino Monitor" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:1400; background:rgba(6,182,212,0.15); border:1px solid var(--brand-cyan); color:var(--brand-cyan); padding:8px 20px; border-radius:20px; font-size:0.85rem; font-weight:700; cursor:pointer; font-family:'Outfit',sans-serif;">
+        <i class="fa-solid fa-wave-square"></i> Arduino Monitor
+    </button>
+
+    <!-- Profile View Modal -->
+    <div id="view-modal-overlay" class="ai-modal-overlay" onclick="closeModal(event)">
+        <div class="ai-modal">
+            <button class="close-modal" onclick="document.getElementById('view-modal-overlay').style.display='none'"><i
+                    class="fa-solid fa-xmark"></i></button>
+            <h2 style="color:var(--text-light)"><i class="fa-solid fa-user"></i> <span
+                    data-i18n="patient_profile">Patient Profile</span></h2>
+            <div id="view-modal-content" style="font-size: 1rem; line-height: 1.8;"></div>
+        </div>
+    </div>
+
+    <!-- Profile Edit Modal -->
+    <div id="edit-modal-overlay" class="ai-modal-overlay" onclick="closeModal(event)">
+        <div class="ai-modal" style="max-height:90vh; overflow-y:auto;">
+            <button class="close-modal" onclick="document.getElementById('edit-modal-overlay').style.display='none'"><i
+                    class="fa-solid fa-xmark"></i></button>
+            <h2 style="color:var(--brand-yellow)"><i class="fa-solid fa-pen"></i> <span data-i18n="edit_profile">Edit
+                    Profile</span></h2>
+            <input type="hidden" id="edit-username">
+            <label data-i18n="age">Age</label>
+            <input type="number" id="edit-age" class="modal-input">
+            <label data-i18n="illness_label">Illness (e.g. asthma, heart condition, none)</label>
+            <input type="text" id="edit-illness" class="modal-input">
+            <label data-i18n="allergies_label">Allergies</label>
+            <input type="text" id="edit-allergies" class="modal-input">
+            <label data-i18n="notes_label">Notes (e.g. drinks energy drinks, very hyperactive)</label>
+            <textarea id="edit-notes" class="modal-input" rows="3" style="resize:vertical;"></textarea>
+            <div id="edit-kutay-vitals"
+                style="display:none; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-top:10px;">
+                <label data-i18n="stable_hr">Stable HR (Kutay Only)</label>
+                <input type="number" id="edit-hr" class="modal-input">
+                <label data-i18n="stable_spo2">Stable SpO2 (Kutay Only)</label>
+                <input type="number" id="edit-spo2" class="modal-input">
+            </div>
+            <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-top:6px;">
+                <button id="edit-watchlist-btn" onclick="toggleWatchlistFromEdit()" style="width:100%; padding:8px; background:rgba(164,93,239,0.1); border:1px solid rgba(164,93,239,0.3); color:#A45DEF; border-radius:8px; font-weight:bold; cursor:pointer; margin-bottom:8px;">
+                    <i class="fa-solid fa-eye"></i> <span id="edit-watchlist-label">Add to Watchlist</span>
+                </button>
+            </div>
+            <button class="btn-submit" onclick="saveProfile()" data-i18n="save_changes">Save Changes</button>
         </div>
     </div>
 
     <script>
-        const map = L.map('map').setView([36.8842, 30.7021], 16);
+        const map = L.map('map', { zoomControl: false }).setView([36.8842, 30.7021], 16);
+        // Clean Dark Map Tiles
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
 
-        const markers = {}; // Store map markers for users
+        const markers = {};
 
-        function addLog(message, isAlert=false) {
+        function addLog(message, isAlert = false) {
             const container = document.getElementById('log-container');
-            const time = new Date().toLocaleTimeString();
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
             const logDiv = document.createElement('div');
             logDiv.className = `log-entry ${isAlert ? 'alert' : ''}`;
-            logDiv.innerHTML = `<strong>${time}</strong><br>${message}`;
+            logDiv.innerHTML = `<span class="log-time">${time}</span>${message}`;
             container.prepend(logDiv);
+
+            // Keep logs clean (max 50)
+            if (container.children.length > 50) container.lastChild.remove();
+        }
+
+        function showModal(username, text) {
+            document.getElementById('ai-modal-title').innerText = username;
+            document.getElementById('ai-modal-content').innerText = text;
+            document.getElementById('ai-modal-overlay').style.display = 'flex';
+        }
+
+        // --- Arduino raw feed ---
+        function updateArduinoLog(rawData) {
+            const logEl = document.getElementById('arduino-log');
+            const time = new Date().toLocaleTimeString('en-US', {hour12: false});
+            logEl.innerHTML = `<span style="color:var(--text-muted);">${time}</span> ${JSON.stringify(rawData)}\n` + logEl.innerHTML;
+            const lines = logEl.innerHTML.split('\n');
+            if(lines.length > 30) logEl.innerHTML = lines.slice(0, 30).join('\n');
+        }
+
+        // --- Add User ---
+        function toggleAddUserForm() {
+            document.getElementById('add-user-form').classList.toggle('open');
+        }
+
+        async function submitAddUser() {
+            const payload = {
+                username: document.getElementById('au-username').value.trim(),
+                name: document.getElementById('au-name').value.trim(),
+                age: parseInt(document.getElementById('au-age').value) || 20,
+                illness: document.getElementById('au-illness').value || 'none',
+                allergies: document.getElementById('au-allergies').value || 'none',
+                emergency_contact: document.getElementById('au-emergency').value || 'none',
+                notes: document.getElementById('au-notes').value || ''
+            };
+            if (!payload.username || !payload.name) {
+                document.getElementById('add-user-msg').innerText = 'Name and Username are required!';
+                return;
+            }
+            const res = await fetch('/add_user_admin', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+            const data = await res.json();
+            const msgEl = document.getElementById('add-user-msg');
+            if (data.success) {
+                msgEl.style.color = 'var(--brand-green)';
+                msgEl.innerText = `✓ ${data.message}`;
+                ['au-username','au-name','au-age','au-illness','au-allergies','au-emergency','au-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+                addLog(`<b>New user added:</b> ${payload.name} &mdash; AI evaluating thresholds...`);
+            } else {
+                msgEl.style.color = 'var(--brand-red)';
+                msgEl.innerText = data.message;
+            }
+        }
+
+        // --- Watchlist ---
+        function toggleWatchlistFromEdit() {
+            const username = document.getElementById('edit-username').value;
+            if (!username) return;
+            fetch('/toggle_watchlist', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({username})})
+            .then(r => r.json()).then(data => {
+                if (data.success) {
+                    if(window.usersData[username]) window.usersData[username].watchlist = data.watchlist;
+                    const label = document.getElementById('edit-watchlist-label');
+                    const btn = document.getElementById('edit-watchlist-btn');
+                    if (data.watchlist) {
+                        label.innerText = 'Remove from Watchlist';
+                        btn.style.background = 'rgba(164,93,239,0.3)';
+                    } else {
+                        label.innerText = 'Add to Watchlist';
+                        btn.style.background = 'rgba(164,93,239,0.1)';
+                    }
+                    addLog(`<b>${username}</b> watchlist: <b style="color:#A45DEF">${data.watchlist ? 'ON' : 'OFF'}</b>`);
+                }
+            });
+        }
+
+        window.usersData = {}; // Store latest users data
+        let currentLang = 'en';
+
+        const i18n = {
+            en: {
+                vital_monitoring: '<i class="fa-solid fa-satellite-dish"></i> VITAL MONITORING',
+                global_tracker: '<i class="fa-solid fa-map-location-dot"></i> GLOBAL PARK TRACKER',
+                ai_diagnostics: '<i class="fa-solid fa-microchip"></i> AI DIAGNOSTICS',
+                neural_online: 'Neural Engine Online',
+                awaiting: 'Awaiting telemetry data...',
+                patient_profile: 'Patient Profile',
+                edit_profile: 'Edit Profile',
+                age: 'Age',
+                illness_label: 'Illness (e.g. asthma, heart condition, none)',
+                allergies_label: 'Allergies',
+                notes_label: 'Notes (e.g. drinks energy drinks, very hyperactive)',
+                stable_hr: 'Stable HR (Kutay Only)',
+                stable_spo2: 'Stable SpO2 (Kutay Only)',
+                save_changes: 'Save Changes',
+                heart_rate: 'Heart Rate',
+                oxygen: 'Oxygen (SpO2)',
+                ai_report: 'AI Report',
+                view: 'View',
+                edit: 'Edit',
+                generating: 'Generating...',
+                profile_updated: 'Profile updated:',
+                name: 'Name', age_label: 'Age', illness_view: 'Illness', allergies_view: 'Allergies',
+                notes_view: 'Notes', emergency: 'Emergency Contact'
+            },
+            tr: {
+                vital_monitoring: '<i class="fa-solid fa-satellite-dish"></i> HAYATI FONKSİYONLAR',
+                global_tracker: '<i class="fa-solid fa-map-location-dot"></i> GLOBAL PARK TAKİPÇİSİ',
+                ai_diagnostics: '<i class="fa-solid fa-microchip"></i> YAPAY ZEKA TANILAYıCı',
+                neural_online: 'Sinir Motoru Aktif',
+                awaiting: 'Telemetri verisi bekleniyor...',
+                patient_profile: 'Hasta Profili',
+                edit_profile: 'Profili Düzenle',
+                age: 'Yaş',
+                illness_label: 'Hastalık (örn. astım, kalp rahatsızlığı, yok)',
+                allergies_label: 'Alerjiler',
+                notes_label: 'Notlar (örn. enerji içeceği içiyor, çok hiperaktif)',
+                stable_hr: 'Sabit Nabız (Sadece Kutay)',
+                stable_spo2: 'Sabit SpO2 (Sadece Kutay)',
+                save_changes: 'Değişiklikleri Kaydet',
+                heart_rate: 'Nabız',
+                oxygen: 'Oksijen (SpO2)',
+                ai_report: 'AI Raporu',
+                view: 'Görüntüle',
+                edit: 'Düzenle',
+                generating: 'Oluşturuluyor...',
+                profile_updated: 'Profil güncellendi:',
+                name: 'İsim', age_label: 'Yaş', illness_view: 'Hastalık', allergies_view: 'Alerjiler',
+                notes_view: 'Notlar', emergency: 'Acil İletişim'
+            }
+        };
+
+        function t(key) { return i18n[currentLang][key] || i18n['en'][key] || key; }
+
+        function applyTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                const val = t(key);
+                if (el.innerHTML !== val) el.innerHTML = val;
+            });
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'en' ? 'tr' : 'en';
+            document.getElementById('lang-toggle-btn').innerHTML = `🌐 ${currentLang === 'en' ? 'TR' : 'EN'}`;
+            applyTranslations();
+        }
+
+        function openViewModal(username) {
+            const data = window.usersData[username];
+            if (!data) return;
+            const content = `
+                <b>${t('name')}:</b> ${data.name}<br>
+                <b>${t('age_label')}:</b> ${data.age || 'N/A'}<br>
+                <b>${t('illness_view')}:</b> ${data.illness || 'N/A'}<br>
+                <b>${t('allergies_view')}:</b> ${data.allergies || 'N/A'}<br>
+                <b>${t('emergency')}:</b> ${data.emergency_contact || 'N/A'}
+                ${data.notes ? `<br><b>${t('notes_view')}:</b> <em>${data.notes}</em>` : ''}
+            `;
+            document.getElementById('view-modal-content').innerHTML = content;
+            document.getElementById('view-modal-overlay').style.display = 'flex';
+        }
+
+        function openEditModal(username) {
+            const data = window.usersData[username];
+            if (!data) return;
+            document.getElementById('edit-username').value = username;
+            document.getElementById('edit-age').value = data.age || 25;
+            document.getElementById('edit-illness').value = data.illness || 'none';
+            document.getElementById('edit-allergies').value = data.allergies || 'none';
+            document.getElementById('edit-notes').value = data.notes || '';
+
+            const kutayVitals = document.getElementById('edit-kutay-vitals');
+            if (username === 'kutay') {
+                kutayVitals.style.display = 'block';
+                document.getElementById('edit-hr').value = data.hr;
+                document.getElementById('edit-spo2').value = data.spo2;
+            } else {
+                kutayVitals.style.display = 'none';
+            }
+
+            document.getElementById('edit-modal-overlay').style.display = 'flex';
+        }
+
+        function saveProfile() {
+            const username = document.getElementById('edit-username').value;
+            const payload = {
+                username: username,
+                age: parseInt(document.getElementById('edit-age').value),
+                illness: document.getElementById('edit-illness').value,
+                allergies: document.getElementById('edit-allergies').value,
+                notes: document.getElementById('edit-notes').value
+            };
+            if (username === 'kutay') {
+                payload.hr = parseInt(document.getElementById('edit-hr').value);
+                payload.spo2 = parseInt(document.getElementById('edit-spo2').value);
+            }
+
+            fetch('/update_profile', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(res => {
+                if (res.success) {
+                    document.getElementById('edit-modal-overlay').style.display = 'none';
+                    addLog(`<b>${t('profile_updated')}</b> ${username}`);
+                } else {
+                    alert("Failed to update");
+                }
+            });
+        }
+
+        function closeModal(e) {
+            if (e.target.classList.contains('ai-modal-overlay')) {
+                e.target.style.display = 'none';
+            }
         }
 
         function getReport(username) {
             const btn = document.getElementById(`btn-ai-${username}`);
-            if(btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...`;
-            fetch(`/get_report?username=${username}`)
-            .then(r => r.json())
-            .then(data => {
-                if(btn) btn.innerHTML = `<i class="fa-solid fa-robot"></i> Get AI Report`;
-                if(data.success) {
-                    addLog(`🤖 <b>AI Medical Report for ${username}:</b><br>${data.report}`);
-                } else {
-                    addLog(`❌ <b>Failed to get report for ${username}</b><br>${data.message}`, true);
-                }
-            }).catch(e => {
-                if(btn) btn.innerHTML = `<i class="fa-solid fa-robot"></i> Get AI Report`;
-                addLog(`❌ <b>Error:</b> ${e}`, true);
-            });
+            if (btn) btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> ${t('generating')}`;
+
+            fetch(`/get_report?username=${username}&lang=${currentLang}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (btn) btn.innerHTML = `<i class="fa-solid fa-robot"></i> ${t('ai_report')}`;
+                    if (data.success) {
+                        showModal(username, data.report);
+                    } else {
+                        addLog(`<b>Failed to get report for ${username}</b><br>${data.message}`, true);
+                    }
+                }).catch(e => {
+                    if (btn) btn.innerHTML = `<i class="fa-solid fa-robot"></i> ${t('ai_report')}`;
+                    addLog(`<b>System Error:</b> ${e}`, true);
+                });
         }
 
         function updateUserCard(data) {
+            window.usersData[data.username] = data;
             const list = document.getElementById("users-list");
             let card = document.getElementById(`user-${data.username}`);
-            
-            const isDanger = data.hr >= 150;
-            
-            if(!card) {
+
+            let maxHr = data.thresholds?.max_hr || 150;
+            let minSpo2 = data.thresholds?.min_spo2 || 92;
+
+            let hrColorClass = '';
+            if (data.hr >= maxHr * 0.90) hrColorClass = 'hr-red';
+            else if (data.hr >= maxHr * 0.75) hrColorClass = 'hr-orange';
+            else if (data.hr >= maxHr * 0.60) hrColorClass = 'hr-yellow';
+
+            // Critical if HR > red threshold or SpO2 < min threshold
+            const isDanger = data.hr >= maxHr || data.spo2 < minSpo2;
+
+            if (!card) {
                 card = document.createElement("div");
                 card.id = `user-${data.username}`;
                 list.appendChild(card);
-                
-                // Add marker to map
-                const iconHtml = `<div style="background-color: ${data.username==='kaan'?'#FDE02A':'#007AFF'}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #fff;"></div>`;
-                const icon = L.divIcon({ className: 'custom-pin', html: iconHtml, iconSize: [16,16] });
-                markers[data.username] = L.marker([data.lat, data.lng], {icon: icon}).bindTooltip(data.name).addTo(map);
+
+                // Add Marker
+                const color = data.username === 'kaan' ? '#EAB308' : '#06B6D4';
+                const iconHtml = `
+                    <div class="custom-pin-wrapper">
+                        <div class="custom-pin-ring" style="background: ${color}"></div>
+                        <div class="custom-pin-core" style="background: ${color}"></div>
+                    </div>`;
+                const icon = L.divIcon({ className: 'leaflet-custom-div', html: iconHtml, iconSize: [30, 30], iconAnchor: [15, 15] });
+                markers[data.username] = L.marker([data.lat, data.lng], { icon: icon }).bindTooltip(data.name, { className: 'dark-tooltip' }).addTo(map);
             }
 
-            card.className = `user-card ${isDanger ? 'danger' : ''}`;
+            let extraClasses = isDanger ? 'danger' : '';
+            if (data.watchlist) extraClasses += ' watchlist';
+            card.className = `user-card ${extraClasses}`;
+            
+            const iconColor = isDanger ? 'var(--brand-red)' : 'var(--brand-green)';
+            const iconClass = isDanger ? 'fa-heart-crack' : 'fa-heart-pulse';
+            
+            const watchlistBadge = data.watchlist ? `<span class="watchlist-badge"><i class="fa-solid fa-eye"></i> Watchlist</span>` : '';
+            const hwBadge = data.username === 'kaan' ? '<span style="color:var(--brand-yellow); font-size:0.8rem; margin-left:5px;">(HW)</span>' : '';
+
             card.innerHTML = `
                 <div class="user-header">
-                    <span>${data.name} ${data.username==='kaan' ? '(You)' : ''}</span>
-                    <i class="fa-solid ${isDanger ? 'fa-triangle-exclamation' : 'fa-check-circle'}" style="color:${isDanger?'#FF3B30':'#34C759'}"></i>
+                    <span>${data.name} ${hwBadge} ${watchlistBadge}</span>
+                    <i class="fa-solid ${iconClass} status-icon" style="color:${iconColor}"></i>
                 </div>
                 <div class="user-vitals">
-                    <div class="vital"><div class="vital-val ${isDanger?'danger-text':''}">${data.hr}</div><div>HR</div></div>
-                    <div class="vital"><div class="vital-val">${data.spo2}%</div><div>SpO2</div></div>
+                    <div class="vital">
+                        <span class="vital-label" data-i18n="heart_rate">Heart Rate</span>
+                        <span class="vital-val ${hrColorClass}">${data.hr}</span>
+                    </div>
+                    <div class="vital">
+                        <span class="vital-label" data-i18n="oxygen">Oxygen (SpO2)</span>
+                        <span class="vital-val ${data.spo2 < minSpo2 ? 'danger-text' : ''}">${data.spo2}%</span>
+                    </div>
                 </div>
-                <button id="btn-ai-${data.username}" onclick="getReport('${data.username}')" style="margin-top: 5px; background: var(--brand-blue); color: white; border: none; padding: 5px; border-radius: 5px; cursor: pointer; font-size: 0.8rem; font-weight: bold;"><i class="fa-solid fa-robot"></i> Get AI Report</button>
+                <button id="btn-ai-${data.username}" class="btn-ai" onclick="getReport('${data.username}')">
+                    <i class="fa-solid fa-robot"></i> <span data-i18n="ai_report">AI Report</span>
+                </button>
+                <div class="btn-row">
+                    <button class="btn-action" onclick="openViewModal('${data.username}')"><i class="fa-solid fa-eye"></i> <span data-i18n="view">View</span></button>
+                    <button class="btn-action" onclick="openEditModal('${data.username}')"><i class="fa-solid fa-pen-to-square"></i> <span data-i18n="edit">Edit</span></button>
+                </div>
             `;
 
-            if(markers[data.username]) {
+            if (markers[data.username]) {
                 markers[data.username].setLatLng([data.lat, data.lng]);
             }
         }
@@ -159,20 +956,41 @@
         function connectAdminWS() {
             const host = window.location.host || "localhost:8000";
             const ws = new WebSocket("ws://" + host + "/ws");
-            
+
             ws.onmessage = (e) => {
                 const data = JSON.parse(e.data);
-                if(data.type === "sensor") {
+                if (data.type === "sensor") {
                     updateUserCard(data);
                     
-                    if(data.alert === "CRITICAL_ALERT") {
-                        addLog(`🔥 <b>SOS: ${data.name}</b><br>${data.reason}`, true);
+                    // Arduino Raw Feed popup (specifically track kaan or generic hardware for demo)
+                    if (data.username === "kaan" && document.getElementById('arduino-popup').classList.contains('open')) {
+                        updateArduinoLog({hr: data.hr, spo2: data.spo2});
+                    }
+
+                    if (data.alert === "CRITICAL_ALERT") {
+                        let extraInfo = "";
+                        if (data.allergies && data.allergies !== "none") extraInfo += `<br><span style="color:var(--brand-yellow); font-size:0.85rem;"><i class="fa-solid fa-notes-medical"></i> Allergies: ${data.allergies}</span>`;
+                        if (data.emergency_contact && data.emergency_contact !== "none") extraInfo += `<br><span style="color:var(--brand-cyan); font-size:0.85rem;"><i class="fa-solid fa-phone"></i> Contact: ${data.emergency_contact}</span>`;
+
+                        addLog(`<b style="font-size:1.1rem;">SOS: ${data.name}</b><br>${data.reason}${extraInfo}`, true);
                     }
                 }
             };
             ws.onclose = () => setTimeout(connectAdminWS, 2000);
         }
+        
+        function fetchInitialUsers() {
+            fetch('/users_list').then(r => r.json()).then(data => {
+                data.users.forEach(u => {
+                    const sensorMock = { ...u, type: 'sensor', hr: u.vitals.hr || 0, spo2: u.vitals.spo2 || 0, lat: u.vitals.lat || 36.884, lng: u.vitals.lng || 30.702 };
+                    updateUserCard(sensorMock);
+                });
+                applyTranslations();
+            });
+        }
+
         connectAdminWS();
+        fetchInitialUsers();
     </script>
 </body>
 </html>

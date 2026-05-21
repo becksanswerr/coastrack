@@ -24,23 +24,23 @@
                     <div class="logo-line" style="animation-delay: 0.3s">STR</div>
                     <div class="logo-line" style="animation-delay: 0.5s">ACK</div>
                 </div>
-                
+                <button onclick="toggleAppLang()" id="app-lang-btn" style="position:absolute; top:15px; right:15px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); color:white; padding:5px 12px; border-radius:20px; font-size:0.8rem; font-weight:700; cursor:pointer;">🌐 TR</button>
                 <div class="login-container" style="width: 100%; max-width: 300px; display: flex; flex-direction: column; gap: 15px; margin-top: 50px; opacity: 0; animation: fadeIn 1s forwards 1s;">
-                    <input type="text" id="login-username" placeholder="Username" style="padding: 15px; border-radius: 10px; border: none; font-size: 1rem; width: 100%;">
-                    <input type="password" id="login-password" placeholder="Password" style="padding: 15px; border-radius: 10px; border: none; font-size: 1rem; width: 100%;">
-                    <button onclick="app.login()" style="background: var(--brand-blue); color: white; padding: 15px; border-radius: 10px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer;">ENTER PARK</button>
-                    <button onclick="app.navigate('view-register')" style="background: transparent; color: var(--brand-blue); border: none; font-weight: bold; cursor: pointer; padding: 5px;">Create Account</button>
-                    <p id="login-error" style="color: var(--brand-red); font-size: 0.9rem; text-align: center; margin: 0; display: none;">Invalid credentials</p>
+                    <input type="text" id="login-username" placeholder="Username" data-i18n-placeholder="username_ph" style="padding: 15px; border-radius: 10px; border: none; font-size: 1rem; width: 100%;">
+                    <input type="password" id="login-password" placeholder="Password" data-i18n-placeholder="password_ph" style="padding: 15px; border-radius: 10px; border: none; font-size: 1rem; width: 100%;">
+                    <button onclick="app.login()" data-i18n="enter_park" style="background: var(--brand-blue); color: white; padding: 15px; border-radius: 10px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer;">ENTER PARK</button>
+                    <button onclick="app.navigate('view-register')" data-i18n="create_account" style="background: transparent; color: var(--brand-blue); border: none; font-weight: bold; cursor: pointer; padding: 5px;">Create Account</button>
+                    <p id="login-error" data-i18n="invalid_creds" style="color: var(--brand-red); font-size: 0.9rem; text-align: center; margin: 0; display: none;">Invalid credentials</p>
                 </div>
             </div>
         </div>
 
         <!-- 1.5 Register Screen -->
         <div id="view-register" class="view">
-            <div class="profile-header">
+            <div class="profile-header" style="padding-bottom: 10px;">
                 <h1 class="top-logo">REGISTER</h1>
             </div>
-            <div class="form-container">
+            <div class="form-container" style="overflow-y: auto; max-height: calc(100% - 80px);">
                 <div class="input-group">
                     <input type="text" id="reg-name" placeholder="Full Name" autocomplete="off">
                     <label for="reg-name">Full Name</label>
@@ -59,11 +59,19 @@
                         <label for="reg-password">Password</label>
                     </div>
                 </div>
-                <h3 style="font-family: 'Anton', sans-serif; letter-spacing: 1px; color: var(--brand-blue); margin-top: 10px; text-align: center;">MEDICAL INFO</h3>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; text-align: center;">Optional: Helps AI provide better analysis</p>
+                <h3 style="font-family: 'Anton', sans-serif; letter-spacing: 1px; color: var(--brand-blue); margin-top: 5px; text-align: center;">MEDICAL INFO</h3>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0px; text-align: center;">Helps AI provide better analysis</p>
                 <div class="input-group">
                     <input type="text" id="reg-illness" placeholder="e.g. Asthma" autocomplete="off">
                     <label for="reg-illness">Chronic Illness</label>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="reg-allergies" placeholder="e.g. Peanuts" autocomplete="off">
+                    <label for="reg-allergies">Known Allergies</label>
+                </div>
+                <div class="input-group">
+                    <input type="tel" id="reg-emergency" placeholder="Emergency Contact" autocomplete="off">
+                    <label for="reg-emergency">Emergency Contact</label>
                 </div>
                 <p id="reg-error" style="color: var(--brand-red); font-size: 0.9rem; text-align: center; display: none;"></p>
                 
@@ -97,10 +105,13 @@
                     <label for="p-weight">Weight (kg)</label>
                 </div>
                 
-                <div class="medical-buttons">
-                    <button class="med-btn">CHRONIC ILLNESS <i class="fa-solid fa-chevron-right"></i></button>
-                    <button class="med-btn">KNOWN ALLERGIES <i class="fa-solid fa-chevron-right"></i></button>
-                    <button class="med-btn">CHRONIC MEDICATION <i class="fa-solid fa-chevron-right"></i></button>
+                <div class="input-group">
+                    <input type="text" id="p-illness" placeholder="E.g. asthma or none">
+                    <label for="p-illness">Chronic Illness</label>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="p-allergies" placeholder="E.g. peanuts or none">
+                    <label for="p-allergies">Known Allergies</label>
                 </div>
                 
                 <button class="action-btn pink" onclick="app.saveProfile()">
@@ -114,10 +125,6 @@
             <div class="app-header">
                 <h2 class="top-logo">COASTRACK</h2>
                 <div class="header-badges" style="display:flex; align-items:center; gap: 10px;">
-                    <div id="vitals-widget" style="background: rgba(255,59,48,0.1); padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: #FF3B30; display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,59,48,0.3);">
-                        <i class="fa-solid fa-heart" style="animation: pulse 1s infinite;"></i> <span id="bpm-val">--</span>
-                        <i class="fa-solid fa-droplet" style="color: #344CB7; margin-left:5px;"></i> <span id="spo2-val" style="color: #344CB7;">--%</span>
-                    </div>
                     <img src="resources/kids_lying_on_grass.jpeg" class="avatar" alt="User">
                 </div>
             </div>
@@ -126,31 +133,73 @@
                     <div class="ride-overlay"></div>
                     <div class="ride-content">
                         <h2 class="ride-title">HELL<br>RIDE</h2>
-                        <div class="ride-meta">
+                        <div class="ride-meta" style="margin-bottom: 10px;">
                             <span class="badge red">Extreme</span>
                             <span class="badge glass"><i class="fa-regular fa-clock"></i> 5m wait</span>
                         </div>
+                        <button onclick="app.scanRide('Hell Ride', this)" style="background: var(--brand-yellow); color: #000; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif;"><i class="fa-solid fa-qrcode"></i> Join Ride</button>
                     </div>
                 </div>
                 <div class="ride-card" style="background-image: url('resources/water_track.jpeg')">
                     <div class="ride-overlay"></div>
                     <div class="ride-content">
                         <h2 class="ride-title">HIGH<br>& LOW</h2>
-                        <div class="ride-meta">
+                        <div class="ride-meta" style="margin-bottom: 10px;">
                             <span class="badge blue">Water</span>
                             <span class="badge glass"><i class="fa-regular fa-clock"></i> 15m wait</span>
                         </div>
+                        <button onclick="app.scanRide('High & Low', this)" style="background: var(--brand-yellow); color: #000; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif;"><i class="fa-solid fa-qrcode"></i> Join Ride</button>
                     </div>
                 </div>
                 <div class="ride-card" style="background-image: url('resources/view.jpeg')">
                     <div class="ride-overlay"></div>
                     <div class="ride-content">
                         <h2 class="ride-title">SCENIC<br>VIEW</h2>
-                        <div class="ride-meta">
+                        <div class="ride-meta" style="margin-bottom: 10px;">
                             <span class="badge green">Family</span>
                             <span class="badge glass"><i class="fa-regular fa-clock"></i> No wait</span>
                         </div>
+                        <button onclick="app.scanRide('Scenic View', this)" style="background: var(--brand-yellow); color: #000; border: none; padding: 8px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; font-family: 'Inter', sans-serif;"><i class="fa-solid fa-qrcode"></i> Join Ride</button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3.5 Rewards / Wallet View -->
+        <div id="view-rewards" class="view with-nav">
+            <div class="app-header">
+                <h2 class="top-logo">REWARDS</h2>
+            </div>
+            <div class="scrollable-content padding-bottom" style="padding-top: 10px;">
+                <div style="background: linear-gradient(135deg, var(--brand-blue), #1c2e8a); padding: 30px 20px; border-radius: 20px; color: white; text-align: center; box-shadow: 0 10px 20px rgba(52, 76, 183, 0.4); margin-bottom: 20px;">
+                    <p style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; opacity: 0.9;">Total Balance</p>
+                    <h1 id="wallet-points" style="font-size: 3rem; font-family: 'Anton', sans-serif; letter-spacing: 2px;">0 CP</h1>
+                    <p style="font-size: 0.8rem; margin-top: 10px; opacity: 0.8;">Ride to earn Coastrack Points!</p>
+                </div>
+                <h3 style="font-family: 'Anton', sans-serif; color: var(--brand-blue); margin-bottom: 10px;">AVAILABLE REWARDS</h3>
+                <div class="list-item" style="border: 1px solid var(--brand-yellow);">
+                    <div class="item-img" style="background-image: url('resources/hotdogs.jpeg'); width: 60px; height: 60px;"></div>
+                    <div class="item-info">
+                        <h3 style="font-size: 1rem;">FREE HOTDOG</h3>
+                        <p style="color: var(--brand-yellow); font-weight: bold; margin: 0;">300 CP</p>
+                    </div>
+                    <button class="add-btn" style="width: 30px; height: 30px; font-size: 0.8rem;"><i class="fa-solid fa-unlock"></i></button>
+                </div>
+                <div class="list-item" style="border: 1px solid var(--brand-yellow);">
+                    <div class="item-img" style="background-image: url('resources/bears_view.jpeg'); width: 60px; height: 60px;"></div>
+                    <div class="item-info">
+                        <h3 style="font-size: 1rem;">%50 DISCOUNT BEAR</h3>
+                        <p style="color: var(--brand-yellow); font-weight: bold; margin: 0;">500 CP</p>
+                    </div>
+                    <button class="add-btn" style="width: 30px; height: 30px; font-size: 0.8rem;"><i class="fa-solid fa-unlock"></i></button>
+                </div>
+                <div class="list-item" style="border: 1px solid var(--brand-yellow);">
+                    <div class="item-img" style="background-image: url('resources/view.jpeg'); width: 60px; height: 60px;"></div>
+                    <div class="item-info">
+                        <h3 style="font-size: 1rem;">FAST TRACK PASS</h3>
+                        <p style="color: var(--brand-yellow); font-weight: bold; margin: 0;">1000 CP</p>
+                    </div>
+                    <button class="add-btn" style="width: 30px; height: 30px; font-size: 0.8rem;"><i class="fa-solid fa-lock" style="color: gray;"></i></button>
                 </div>
             </div>
         </div>
@@ -258,20 +307,6 @@
             <div id="map" style="flex: 1; width: 100%; border-radius: 20px 20px 0 0; z-index: 1;"></div>
         </div>
 
-        <!-- 6. Emergency View -->
-        <div id="view-emergency" class="view with-nav emergency-bg">
-            <div class="app-header transparent">
-                <h2 class="top-logo black-text">COASTRACK</h2>
-            </div>
-            <div class="emergency-content">
-                <div class="warning-circle">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-                <h3>EMERGENCY</h3>
-                <p>You are about to inform an emergency and reach the designated staff.</p>
-                <button class="action-btn white shadow">CALL NOW</button>
-            </div>
-        </div>
 
         <!-- Bottom Navigation -->
         <nav id="bottom-nav" class="hidden">
@@ -279,25 +314,48 @@
                 <i class="fa-solid fa-ticket"></i>
                 <span>Rides</span>
             </div>
+            <div class="nav-item" id="nav-rewards" onclick="app.navigate('view-rewards', 'nav-rewards')">
+                <i class="fa-solid fa-wallet"></i>
+                <span>Rewards</span>
+            </div>
             <div class="nav-item" id="nav-food" onclick="app.navigate('view-food', 'nav-food')">
                 <i class="fa-solid fa-burger"></i>
                 <span>Food</span>
-            </div>
-            <div class="nav-item" id="nav-shop" onclick="app.navigate('view-shop', 'nav-shop')">
-                <i class="fa-solid fa-gift"></i>
-                <span>Shop</span>
             </div>
             <div class="nav-item" id="nav-map" onclick="app.navigate('view-map', 'nav-map'); if(app.map) app.map.invalidateSize();">
                 <i class="fa-solid fa-map-location-dot"></i>
                 <span>Map</span>
             </div>
-            <div class="nav-item" id="nav-emergency" onclick="app.navigate('view-emergency', 'nav-emergency')">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                <span>SOS</span>
-            </div>
         </nav>
     </div>
 
+    <script>
+    const appI18n = {
+        en: {
+            enter_park: 'ENTER PARK', create_account: 'Create Account', invalid_creds: 'Invalid credentials',
+            username_ph: 'Username', password_ph: 'Password',
+            save_fun: 'Save and Have Fun!', chronic_illness: 'Chronic Illness', known_allergies: 'Known Allergies',
+            rides: 'Rides', rewards: 'Rewards', food: 'Food', map: 'Map'
+        },
+        tr: {
+            enter_park: 'PARKA GİR', create_account: 'Hesap Oluştur', invalid_creds: 'Geçersiz bilgiler',
+            username_ph: 'Kullanıcı Adı', password_ph: 'Şifre',
+            save_fun: 'Kaydet ve Eğlen!', chronic_illness: 'Kronik Hastalık', known_allergies: 'Bilinen Alerjiler',
+            rides: 'Binecekler', rewards: 'Ödüller', food: 'Yiyecek', map: 'Harita'
+        }
+    };
+    let appLang = 'en';
+    function at(key) { return appI18n[appLang][key] || appI18n['en'][key] || key; }
+    function applyAppTranslations() {
+        document.querySelectorAll('[data-i18n]').forEach(el => { el.innerText = at(el.getAttribute('data-i18n')); });
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = at(el.getAttribute('data-i18n-placeholder')); });
+    }
+    function toggleAppLang() {
+        appLang = appLang === 'en' ? 'tr' : 'en';
+        document.getElementById('app-lang-btn').innerText = `🌐 ${appLang === 'en' ? 'TR' : 'EN'}`;
+        applyAppTranslations();
+    }
+    </script>
     <script src="app.js"></script>
 </body>
 </html>
