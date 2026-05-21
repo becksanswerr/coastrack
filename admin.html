@@ -804,6 +804,10 @@
                 <b>${t('allergies_view')}:</b> ${data.allergies || 'N/A'}<br>
                 <b>${t('emergency')}:</b> ${data.emergency_contact || 'N/A'}
                 ${data.notes ? `<br><b>${t('notes_view')}:</b> <em>${data.notes}</em>` : ''}
+                <hr style="border: 1px solid rgba(255,255,255,0.1); margin: 10px 0;">
+                <b><i class="fa-solid fa-microchip" style="color:var(--brand-cyan)"></i> AI Thresholds:</b><br>
+                <span style="color:var(--brand-red)">Max HR Limit:</span> ${data.thresholds?.max_hr || 150} bpm<br>
+                <span style="color:var(--brand-blue)">Min SpO2 Limit:</span> ${data.thresholds?.min_spo2 || 92}%
             `;
             document.getElementById('view-modal-content').innerHTML = content;
             document.getElementById('view-modal-overlay').style.display = 'flex';

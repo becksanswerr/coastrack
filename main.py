@@ -13,8 +13,21 @@ from pydantic import BaseModel
 from typing import List
 from contextlib import asynccontextmanager
 
+# LangChain Imports
+from langchain_core.tools import tool
+from langchain_openai import ChatOpenAI
+from langchain.agents import create_agent
+from langchain_core.prompts import ChatPromptTemplate
+
+from tests.voice_engine import TTSManager
+tts_manager = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global tts_manager
+    print("TTS (OmniVoice) modeli yükleniyor...")
+    tts_manager = TTSManager(ref_audio_path="tests/voice.wav")
+    
     loop = asyncio.get_running_loop()
     threading.Thread(target=serial_reader, args=(loop,), daemon=True).start()
     threading.Thread(target=simulate_all_users, args=(loop,), daemon=True).start()
@@ -61,6 +74,9 @@ class AddUserAdminRequest(BaseModel):
     allergies: str = "none"
     emergency_contact: str = "none"
     notes: str = ""
+
+class VoiceChatRequest(BaseModel):
+    text: str
 
 class WatchlistRequest(BaseModel):
     username: str
@@ -215,6 +231,10 @@ async def get_index():
 async def get_logs_page():
     return FileResponse("logs.html")
 
+@app.get("/voice_chat")
+async def get_voice_chat_page():
+    return FileResponse("voice_chat.html")
+
 @app.get("/user_logs")
 async def get_user_logs(username: str):
     u = username.lower()
@@ -249,6 +269,95 @@ def log_vitals(username, hr, spo2):
     except Exception as e:
         print(f"Log yazılamadı: {e}")
 
+# AI Voice Assistant Agent Setup
+@tool
+def get_park_info(category: str) -> str:
+    """Lunapark hakkında bilgi döndürür. category parametresi olarak 'genel', 'oyuncaklar', 'yemek', 'magaza' alabilir."""
+    info = {
+        "genel": "Çalışma Saatleri: 09:00 - 23:00. Ödüller: 300 CP Sosisli, 500 CP İndirimli Ayıcık, 1000 CP Hızlı Geçiş.",
+        "oyuncaklar": "Hell Ride: Ekstrem (korkunç), bekleme 5 dk. High & Low: Sulu, bekleme 15 dk. Scenic View: Ailece sakin, sıra yok.",
+        "yemek": "Yemek Alanı: Burgers (4.5/5), Pizza (4/5), Hotdogs (4/5), Ice Cream (5/5).",
+        "magaza": "Mağaza: Bears (ayıcıklar), Plushies (peluşlar), Gift Cards."
+    }
+    return info.get(category.lower(), "Geçerli bir kategori verin: genel, oyuncaklar, yemek, magaza.")
+
+@tool
+def get_user_vitals(username: str) -> str:
+    """Veritabanındaki bir kullanıcının güncel nabız (hr), oksijen (spo2) ve hastalık bilgilerini getirir. Ziyaretçi analiz etmek istendiğinde kullanılır."""
+    u = username.lower()
+    
+    # Basit bir arama (substring eşleşmesi)
+    matched_user = None
+    for key in users_db.keys():
+        if u in key or key in u:
+            matched_user = key
+            break
+            
+    if not matched_user:
+        return f"{username} adında bir ziyaretçi/kullanıcı bulunamadı."
+        
+    u = matched_user
+    user_info = users_db[u]
+    logs = vitals_log_buffer.get(u, [])
+    
+    res = f"{user_info['name']} kullanıcısının verileri:\n"
+    res += f"Hastalık: {user_info.get('illness', 'Bilinmiyor')}, Alerjiler: {user_info.get('allergies', 'Bilinmiyor')}\n"
+    
+    if not logs:
+        vitals = user_info.get('vitals', {})
+        res += f"- Son Nabız: {vitals.get('hr', 'N/A')}, Son SpO2: {vitals.get('spo2', 'N/A')}%\n"
+    else:
+        recent = logs[-3:]
+        for l in recent:
+            res += f"- Nabız: {l['hr']}, SpO2: {l['spo2']}%\n"
+    return res
+
+agent_tools = [get_park_info, get_user_vitals]
+
+llm = ChatOpenAI(
+    base_url="http://127.0.0.1:1234/v1",
+    api_key="lm-studio",
+    model="local-model",
+    temperature=0.7
+)
+
+voice_agent_graph = create_agent(
+    model=llm,
+    tools=agent_tools,
+    system_prompt="Sen Coastrack lunaparkında çalışan dost canlısı bir asistanın. Ziyaretçilerin sağlık durumlarını ve nabızlarını analiz etme yeteneğine SAHİPSİN! Sana birini sorarlarsa analiz edebilirim de ve araçları kullan. Sorulara Türkçe, net ve kısa (1-3 cümle) cevap ver."
+)
+
+global_chat_history = []
+
+@app.post("/api/voice_chat")
+async def api_voice_chat(req: VoiceChatRequest):
+    global global_chat_history
+    try:
+        global_chat_history.append({"role": "user", "content": req.text})
+        if len(global_chat_history) > 10:
+            global_chat_history = global_chat_history[-10:]
+
+        inputs = {"messages": global_chat_history}
+        
+        # create_agent compiled graph'ını çağırıyoruz
+        result = await asyncio.to_thread(voice_agent_graph.invoke, inputs)
+        # Sonuç dict'inde 'messages' listesi var, son mesaj AI'nin nihai cevabıdır.
+        final_message = result["messages"][-1].content
+        
+        global_chat_history.append({"role": "assistant", "content": final_message})
+        if len(global_chat_history) > 10:
+            global_chat_history = global_chat_history[-10:]
+        
+        # Cevabı kendi PC hoparlörümüzden (voice.wav ile) okutuyoruz
+        def play_audio():
+            tts_manager.speak([final_message])
+        threading.Thread(target=play_audio).start()
+        
+        return {"response": final_message}
+    except Exception as e:
+        print("Voice Chat Error:", str(e))
+        return {"response": "Şu anda teknik bir arıza yaşıyorum. Lütfen daha sonra tekrar deneyin."}
+
 async def evaluate_user_with_llm(username: str, lang: str = "en"):
     if username not in users_db:
         return {"success": False, "message": "Kullanıcı bulunamadı"}
@@ -271,12 +380,12 @@ Analyze the risk and recent trend. {lang_instr} Respond STRICTLY with a valid JS
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.1,
-        "max_tokens": 100
+        "max_tokens": 1000
     }
     
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post("http://localhost:1234/v1/chat/completions", json=payload, timeout=10) as resp:
+            async with session.post("http://localhost:1234/v1/chat/completions", json=payload, timeout=45) as resp:
                 if resp.status == 200:
                     resp_json = await resp.json()
                     answer = resp_json["choices"][0]["message"]["content"].strip()
@@ -317,11 +426,11 @@ Consider their medical conditions carefully. Respond STRICTLY with a valid JSON:
             {"role": "system", "content": "You are a medical AI. Output ONLY valid JSON, no markdown."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.1, "max_tokens": 150
+        "temperature": 0.1, "max_tokens": 1000
     }
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.post("http://localhost:1234/v1/chat/completions", json=payload, timeout=15) as resp:
+            async with session.post("http://localhost:1234/v1/chat/completions", json=payload, timeout=45) as resp:
                 if resp.status == 200:
                     resp_json = await resp.json()
                     answer = resp_json["choices"][0]["message"]["content"].strip()
@@ -496,6 +605,8 @@ def simulate_all_users(loop):
                 
             if username == "kutay":
                 v = user["vitals"]
+                v["lat"] = users_db.get("kaan", {}).get("vitals", {}).get("lat", 36.8842) + random.uniform(-0.0002, 0.0002)
+                v["lng"] = users_db.get("kaan", {}).get("vitals", {}).get("lng", 30.7021) + random.uniform(-0.0002, 0.0002)
                 asyncio.run_coroutine_threadsafe(process_user_data(username, v), loop)
                 continue
                 
@@ -504,8 +615,13 @@ def simulate_all_users(loop):
             v["hr"] = max(55, min(185, v["hr"]))
             v["spo2"] += random.randint(-1, 1)
             v["spo2"] = max(90, min(100, v["spo2"]))
-            v["lat"] += random.uniform(-0.0001, 0.0001)
-            v["lng"] += random.uniform(-0.0001, 0.0001)
+            
+            # Botları her zaman "kaan" kullanıcısının etrafında (yakınında) tut
+            anchor_lat = users_db.get("kaan", {}).get("vitals", {}).get("lat", 36.8842)
+            anchor_lng = users_db.get("kaan", {}).get("vitals", {}).get("lng", 30.7021)
+            
+            v["lat"] = anchor_lat + random.uniform(-0.0008, 0.0008)
+            v["lng"] = anchor_lng + random.uniform(-0.0008, 0.0008)
 
             asyncio.run_coroutine_threadsafe(process_user_data(username, v), loop)
         time.sleep(2)

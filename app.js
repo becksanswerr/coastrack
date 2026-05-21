@@ -151,7 +151,8 @@ const app = {
         } catch(e) {
             console.error(e);
             buttonElement.innerHTML = originalText;
-
+        }
+    },
 
     map: null,
     marker: null,
