@@ -19,6 +19,9 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 from langchain_core.prompts import ChatPromptTemplate
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from tests.voice_engine import TTSManager
 tts_manager = None
 
@@ -26,7 +29,7 @@ tts_manager = None
 async def lifespan(app: FastAPI):
     global tts_manager
     print("TTS (OmniVoice) modeli yükleniyor...")
-    tts_manager = TTSManager(ref_audio_path="tests/voice.wav")
+    tts_manager = TTSManager(ref_audio_path=os.path.join(os.path.dirname(__file__), "..", "tests", "voice.wav"))
     
     loop = asyncio.get_running_loop()
     threading.Thread(target=serial_reader, args=(loop,), daemon=True).start()
@@ -36,7 +39,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Coastrack Backend", lifespan=lifespan)
-app.mount("/resources", StaticFiles(directory="resources"), name="resources")
+frontend_public_dir = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public")
+app.mount("/resources", StaticFiles(directory=os.path.join(frontend_public_dir, "resources")), name="resources")
 
 # Çoklu Kullanıcı Veritabanı (Memory-based)
 users_db = {
@@ -225,15 +229,15 @@ manager = ConnectionManager()
 
 @app.get("/")
 async def get_index():
-    return FileResponse("index.html")
+    return FileResponse(os.path.join(frontend_public_dir, "index.html"))
 
 @app.get("/logs")
 async def get_logs_page():
-    return FileResponse("logs.html")
+    return FileResponse(os.path.join(frontend_public_dir, "logs.html"))
 
 @app.get("/voice_chat")
 async def get_voice_chat_page():
-    return FileResponse("voice_chat.html")
+    return FileResponse(os.path.join(frontend_public_dir, "voice_chat.html"))
 
 @app.get("/user_logs")
 async def get_user_logs(username: str):
@@ -262,7 +266,9 @@ def log_vitals(username, hr, spo2):
         vitals_log_buffer[username].pop(0)
         
     try:
-        with open("vitals_log.jsonl", "w", encoding="utf-8") as f:
+        data_dir = os.path.join(os.path.dirname(__file__), "..", "..", "data")
+        os.makedirs(data_dir, exist_ok=True)
+        with open(os.path.join(data_dir, "vitals_log.jsonl"), "w", encoding="utf-8") as f:
             for u in vitals_log_buffer:
                 for log_entry in vitals_log_buffer[u]:
                     f.write(json.dumps(log_entry) + "\n")
@@ -339,16 +345,13 @@ async def api_voice_chat(req: VoiceChatRequest):
 
         inputs = {"messages": global_chat_history}
         
-        # create_agent compiled graph'ını çağırıyoruz
         result = await asyncio.to_thread(voice_agent_graph.invoke, inputs)
-        # Sonuç dict'inde 'messages' listesi var, son mesaj AI'nin nihai cevabıdır.
         final_message = result["messages"][-1].content
         
         global_chat_history.append({"role": "assistant", "content": final_message})
         if len(global_chat_history) > 10:
             global_chat_history = global_chat_history[-10:]
         
-        # Cevabı kendi PC hoparlörümüzden (voice.wav ile) okutuyoruz
         def play_audio():
             tts_manager.speak([final_message])
         threading.Thread(target=play_audio).start()
@@ -470,8 +473,9 @@ async def periodic_llm_checker():
 
 @app.get("/{filename}")
 async def get_static(filename: str):
-    if os.path.exists(filename):
-        return FileResponse(filename)
+    file_path = os.path.join(frontend_public_dir, filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
     return {"error": "File not found"}
 
 # Kişiselleştirilmiş Eşik Değerler ve Kural Tabanlı Kontrol
